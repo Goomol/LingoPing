@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.3.7",
+    "@ant-design/icons": "^6.3.4",
     "@lingoping/core": "*",
     "@supabase/supabase-js": "^2.116.0",
     "antd": "^5.18.0",
