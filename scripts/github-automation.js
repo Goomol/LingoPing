@@ -189,12 +189,134 @@ async function releaseProduction(customTag) {
   }
 }
 
+/**
+ * Watches in-progress workflow runs until all are completed
+ */
+async function watchWorkflowStatus() {
+  console.log('\n======================================================');
+  console.log(` 🐙 GitHub Actions Live Watch [${REPO_OWNER}/${REPO_NAME}]`);
+  console.log('======================================================\n');
+
+  let active = true;
+  let attempts = 0;
+  const maxAttempts = 30; // 30 * 6s = 3 minutes max
+
+  while (active && attempts < maxAttempts) {
+    attempts++;
+    try {
+      const data = await fetchGithub('/actions/runs?per_page=6');
+      const runs = data.workflow_runs || [];
+
+      const inProgress = runs.filter((r) => r.status === 'in_progress' || r.status === 'queued');
+
+      console.clear();
+      console.log(`[GitHub Actions Watch] Poll #${attempts} (${new Date().toLocaleTimeString()}) - Active: ${inProgress.length}`);
+      console.log('------------------------------------------------------');
+
+      for (const run of runs) {
+        const statusIcon =
+          run.status === 'in_progress'
+            ? '⏳ In Progress'
+            : run.status === 'queued'
+            ? '⏱️  Queued'
+            : run.conclusion === 'success'
+            ? '✅ Passed'
+            : run.conclusion === 'failure'
+            ? '❌ Failed'
+            : run.conclusion === 'cancelled'
+            ? '🚫 Cancelled'
+            : `• ${run.status}`;
+
+        console.log(`${statusIcon.padEnd(16)} | ${run.head_branch.padEnd(10)} | ${run.name}`);
+      }
+
+      if (inProgress.length === 0) {
+        console.log('\n🎉 All workflow runs completed!');
+        active = false;
+        break;
+      }
+    } catch (err) {
+      console.error('Error polling runs:', err.message);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+  }
+}
+
+/**
+ * Syncs all branches (develop, staging, main) with remote origin
+ */
+async function syncBranches() {
+  console.log('\n🔄 [GitHub Automation] Syncing local branches with remote origin...');
+  try {
+    console.log('1. Fetching all remote branches and tags...');
+    execSync('git fetch origin --prune --tags', { cwd: rootDir, stdio: 'inherit' });
+
+    const branches = ['develop', 'staging', 'main'];
+    for (const b of branches) {
+      console.log(`2. Syncing branch '${b}'...`);
+      execSync(`git checkout ${b}`, { cwd: rootDir, stdio: 'inherit' });
+      execSync(`git pull --ff-only origin ${b}`, { cwd: rootDir, stdio: 'inherit' });
+    }
+
+    execSync('git checkout develop', { cwd: rootDir, stdio: 'inherit' });
+    console.log('\n✅ All local branches are synchronized with origin!\n');
+  } catch (err) {
+    console.error('❌ Error syncing branches:', err.message);
+    process.exit(1);
+  }
+}
+
+/**
+ * Lists published GitHub Releases and downloadable assets
+ */
+async function listReleases() {
+  console.log('\n======================================================');
+  console.log(` 📦 GitHub Releases & Assets [${REPO_OWNER}/${REPO_NAME}]`);
+  console.log('======================================================\n');
+
+  try {
+    const releases = await fetchGithub('/releases?per_page=5');
+    if (!releases || releases.length === 0) {
+      console.log('ℹ️  No published GitHub releases found yet.');
+      return;
+    }
+
+    for (const rel of releases) {
+      console.log(`🏷️  Release:     ${rel.name || rel.tag_name} (${rel.tag_name})`);
+      console.log(`   • Published:   ${new Date(rel.published_at).toLocaleString()}`);
+      console.log(`   • Draft/Pre:   ${rel.draft ? 'Yes' : 'No'} / ${rel.prerelease ? 'Yes' : 'No'}`);
+      console.log(`   • URL:         ${rel.html_url}`);
+      if (rel.assets && rel.assets.length > 0) {
+        console.log('   • Downloadable Assets:');
+        for (const asset of rel.assets) {
+          const sizeMb = (asset.size / (1024 * 1024)).toFixed(2);
+          console.log(`     - 📥 ${asset.name} (${sizeMb} MB, ${asset.download_count} downloads)`);
+          console.log(`       Direct link: ${asset.browser_download_url}`);
+        }
+      } else {
+        console.log('   • Assets:      None attached');
+      }
+      console.log('------------------------------------------------------');
+    }
+  } catch (err) {
+    console.error('❌ Could not fetch GitHub releases:', err.message);
+  }
+  console.log('');
+}
+
 const command = process.argv[2] || 'status';
 
 switch (command) {
   case 'status':
   case 'runs':
     checkWorkflowStatus();
+    break;
+  case 'watch':
+    watchWorkflowStatus();
+    break;
+  case 'sync':
+    syncBranches();
     break;
   case 'staging':
     releaseStaging();
@@ -203,8 +325,12 @@ switch (command) {
   case 'production':
     releaseProduction(process.argv[3]);
     break;
+  case 'releases':
+    listReleases();
+    break;
   default:
     console.log(`Unknown command: ${command}`);
-    console.log('Available commands: status, staging, prod');
+    console.log('Available commands: status, watch, staging, prod, sync, releases');
     process.exit(1);
 }
+

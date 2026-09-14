@@ -206,20 +206,28 @@ export function generateInteractiveDrill(card: Card): InteractiveDrill {
   if (selectedMode === 1 && plural) {
     const cleanPlural = plural.replace(/^(die\s+)/i, '').trim();
 
-    // Create plausible plural distractors
-    const distractor1 = cleanPlural.endsWith('e') ? `${cleanPlural}n` : `${lemma}e`;
-    const distractor2 = cleanPlural.endsWith('en') ? `${lemma}er` : `${lemma}s`;
-    const distractor3 = `${lemma}en`;
+    // Create unique plausible plural distractors
+    const distractorCandidates = [
+      `${lemma}en`,
+      `${lemma}e`,
+      `${lemma}er`,
+      `${lemma}s`,
+      cleanPlural.endsWith('e') ? `${cleanPlural}n` : `${lemma}en`,
+      `${lemma}ten`,
+    ];
 
-    const options = Array.from(
-      new Set([plural, `die ${distractor1}`, `die ${distractor2}`, `die ${distractor3}`])
-    )
-      .filter((opt) => opt !== `die ${cleanPlural}`)
-      .slice(0, 4);
-
-    if (!options.includes(plural)) {
-      options[0] = plural;
+    const distractorSet = new Set<string>();
+    for (const cand of distractorCandidates) {
+      const formatted = `die ${cand}`;
+      if (
+        formatted.toLowerCase() !== plural.toLowerCase() &&
+        cand.toLowerCase() !== cleanPlural.toLowerCase()
+      ) {
+        distractorSet.add(formatted);
+      }
     }
+
+    const options = [plural, ...Array.from(distractorSet).slice(0, 3)];
     options.sort(() => Math.random() - 0.5);
 
     return {

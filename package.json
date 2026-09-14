@@ -22,8 +22,11 @@
     "env:check": "node scripts/check-env.js",
     "repo:create": "node scripts/create-github-repo.js",
     "github:status": "node scripts/github-automation.js status",
+    "github:watch": "node scripts/github-automation.js watch",
+    "github:sync": "node scripts/github-automation.js sync",
     "github:staging": "node scripts/github-automation.js staging",
-    "github:prod": "node scripts/github-automation.js prod"
+    "github:prod": "node scripts/github-automation.js prod",
+    "github:releases": "node scripts/github-automation.js releases"
   },
   "keywords": [
     "fsrs",
