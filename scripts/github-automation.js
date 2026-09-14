@@ -41,7 +41,25 @@ const env = {
   ...parseEnv(path.join(rootDir, '.env.local')),
 };
 
-const token = env.GITHUB_TOKEN || process.env.GITHUB_TOKEN || '';
+function getGitToken() {
+  if (env.GITHUB_TOKEN || process.env.GITHUB_TOKEN) {
+    return env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+  }
+  try {
+    const creds = execSync('printf "protocol=https\\nhost=github.com\\n" | git credential fill', {
+      stdio: ['pipe', 'pipe', 'ignore'],
+    }).toString();
+    const match = creds.match(/password=([^\r\n]+)/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  } catch {
+    // Ignore fallback
+  }
+  return '';
+}
+
+const token = getGitToken();
 
 async function fetchGithub(endpoint) {
   const headers = {
