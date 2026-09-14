@@ -1,0 +1,54 @@
+name: Release Production Build
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-production:
+    name: Build & Package Production Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Full Test Suite
+        run: npm run test:all
+
+      - name: Package Production Extension
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL || 'https://vgghstqqehgoxuytvpat.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.PROD_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_bqwrvqIo4py37geu-XgRag_-mD4UMNS' }}
+        run: npm run pack:prod
+
+      - name: Upload Production ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lingoping-production-store-build
+          path: releases/*.zip
+          retention-days: 30
+
+      - name: Create GitHub Release (on Tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: releases/*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false

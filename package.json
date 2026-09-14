@@ -1,0 +1,33 @@
+{
+  "name": "lingoping-monorepo",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "LingoPing - Contextual FSRS Spaced-Repetition Micro-Sessions & Grammar Reviews",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:dev": "npm run build --workspace=packages/core && npm run build --workspace=packages/extension -- --mode development",
+    "build:staging": "npm run build --workspace=packages/core && npm run build --workspace=packages/extension -- --mode staging",
+    "build:prod": "npm run build --workspace=packages/core && npm run build --workspace=packages/extension -- --mode production",
+    "pack:staging": "node scripts/pack-extension.js staging",
+    "pack:prod": "node scripts/pack-extension.js production",
+    "test": "npm run test --workspace=packages/core",
+    "test:all": "npm run test --workspaces",
+    "dev:extension": "npm run dev --workspace=packages/extension",
+    "build:extension": "npm run build --workspace=packages/extension",
+    "env:setup": "node scripts/setup-env.js",
+    "env:check": "node scripts/check-env.js"
+  },
+  "keywords": [
+    "fsrs",
+    "spaced-repetition",
+    "chrome-extension",
+    "language-learning",
+    "ant-design"
+  ],
+  "author": "LingoPing Team",
+  "license": "MIT"
+}

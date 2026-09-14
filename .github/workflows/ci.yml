@@ -1,0 +1,47 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [main, staging, develop]
+  pull_request:
+    branches: [main, staging, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: TypeCheck, Lint & Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: TypeScript Compilation Check
+        run: npm run build --workspace=packages/core
+
+      - name: Run Full Test Suite (Core & Extension)
+        run: npm run test:all
+
+      - name: Extension Production Build Validation
+        run: npm run build:prod
+
+      - name: Manifest V3 & CSP Validation
+        run: |
+          test -f packages/extension/dist/manifest.json || { echo "Missing manifest.json"; exit 1; }
+          test -f packages/extension/dist/background.js || { echo "Missing background.js"; exit 1; }
+          test -f packages/extension/dist/session.html || { echo "Missing session.html"; exit 1; }
+          test -f packages/extension/dist/popup.html || { echo "Missing popup.html"; exit 1; }
+          test -f packages/extension/dist/options.html || { echo "Missing options.html"; exit 1; }
+          echo "✅ Manifest V3 and core files verified."

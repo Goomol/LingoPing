@@ -1,0 +1,17 @@
+{
+  "name": "@lingoping/core",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Core FSRS mathematical engine, NLP ingestion, and AI enrichment schemas for LingoPing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

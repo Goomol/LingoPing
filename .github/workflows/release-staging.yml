@@ -1,0 +1,40 @@
+name: Release Staging Build
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+jobs:
+  build-staging:
+    name: Build & Package Staging Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Test Suite
+        run: npm run test:all
+
+      - name: Package Staging Extension
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL || 'https://vgghstqqehgoxuytvpat.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_bqwrvqIo4py37geu-XgRag_-mD4UMNS' }}
+        run: npm run pack:staging
+
+      - name: Upload Staging ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lingoping-staging-build
+          path: releases/*.zip
+          retention-days: 14

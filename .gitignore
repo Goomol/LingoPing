@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+# Environment & Secret Files (Strictly Ignored)
+.env
+.env.*
+!.env*.example
+
+# Build Artifacts & Releases
+releases/
+*.zip
