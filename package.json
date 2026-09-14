@@ -19,7 +19,8 @@
     "dev:extension": "npm run dev --workspace=packages/extension",
     "build:extension": "npm run build --workspace=packages/extension",
     "env:setup": "node scripts/setup-env.js",
-    "env:check": "node scripts/check-env.js"
+    "env:check": "node scripts/check-env.js",
+    "repo:create": "node scripts/create-github-repo.js"
   },
   "keywords": [
     "fsrs",

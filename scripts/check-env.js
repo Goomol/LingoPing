@@ -149,7 +149,17 @@ async function runCheck() {
   }
   console.log(`   • Gemini:    ${maskKey(geminiKey)}  ➔  ${geminiStatus}`);
 
-  console.log('\n======================================================');
+  // 3. GitHub Automation Check
+  const ghUser = env.GITHUB_USERNAME || '';
+  const ghToken = env.GITHUB_TOKEN || '';
+  console.log('\n🐙 [3] GitHub Automation:');
+  console.log(`   • Username:  ${ghUser ? `@${ghUser}` : '(not configured)'}`);
+  console.log(`   • Token:     ${maskKey(ghToken)}`);
+  if (ghUser && ghToken) {
+    console.log(`   • Ready to run: npm run repo:create`);
+  } else {
+    console.log(`   • Status:    Add GITHUB_USERNAME and GITHUB_TOKEN to .env to automate repo creation.`);
+  }
   console.log('🔒 Security Notice:');
   console.log(' • All credentials remain strictly on your local machine.');
   console.log(' • .env is excluded from git via .gitignore.');
