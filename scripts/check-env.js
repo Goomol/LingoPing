@@ -69,14 +69,14 @@ async function runCheck() {
 
   console.log(`📁 Reading local configuration from: ${fs.existsSync(envLocalPath) ? '.env.local' : '.env'}\n`);
 
-  // 1. Supabase Check
+  // 1. Supabase Check (Production)
   const sbUrl = env.VITE_SUPABASE_URL || '';
   const sbKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY || '';
   const sbSecret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '';
   const isPublishableFormat = sbKey.startsWith('sb_publishable_');
   const isLegacyJwtFormat = sbKey.startsWith('eyJ') && sbKey.split('.').length === 3;
 
-  console.log('📦 [1] Supabase Cloud Database:');
+  console.log('📦 [1] Supabase Cloud Database (Production):');
   console.log(`   • URL:             ${sbUrl ? sbUrl : '(not configured)'}`);
   
   if (isPublishableFormat) {
@@ -117,6 +117,41 @@ async function runCheck() {
     }
   }
   console.log(`   • Status:          ${sbStatus}\n`);
+
+  // 1b. Supabase Check (Staging)
+  const stagingEnvPath = path.join(rootDir, '.env.staging');
+  if (fs.existsSync(stagingEnvPath)) {
+    const stagingEnv = parseEnvFile(stagingEnvPath);
+    const stagUrl = stagingEnv.VITE_SUPABASE_URL || '';
+    const stagKey = stagingEnv.VITE_SUPABASE_PUBLISHABLE_KEY || stagingEnv.VITE_SUPABASE_ANON_KEY || '';
+    const isStagPub = stagKey.startsWith('sb_publishable_');
+
+    console.log('🧪 [1b] Supabase Cloud Database (Staging):');
+    console.log(`   • Config File:     .env.staging`);
+    console.log(`   • URL:             ${stagUrl ? stagUrl : '(not configured)'}`);
+    console.log(`   • Publishable Key: ${maskKey(stagKey)}`);
+
+    let stagStatus = '❌ Not Configured';
+    if (stagUrl && stagKey && !stagUrl.includes('your-staging-ref') && !stagKey.includes('...')) {
+      try {
+        const stagClient = createClient(stagUrl, stagKey);
+        const { status, error } = await stagClient.from('cards').select('id').limit(1);
+
+        if (!error) {
+          stagStatus = '✅ Connected & Ready! (Database schema verified)';
+        } else if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+          stagStatus = '✅ Valid Credentials & Connected! (Tables not initialized yet: copy & run supabase/migrations/20260914000000_init_lingoping.sql in Staging SQL Editor)';
+        } else if (error.message?.includes('Invalid API key') || status === 401) {
+          stagStatus = '❌ Invalid API Key. Please verify the key from your Supabase Dashboard.';
+        } else {
+          stagStatus = `⚠️ Connected, status: ${error.message} (HTTP ${status})`;
+        }
+      } catch (err) {
+        stagStatus = `⚠️ Connection error: ${err?.message || 'Network unreachable'}`;
+      }
+    }
+    console.log(`   • Status:          ${stagStatus}\n`);
+  }
 
   // 2. BYOK AI Services Check
   console.log('🤖 [2] AI Provider Keys (BYOK - Optional):');
