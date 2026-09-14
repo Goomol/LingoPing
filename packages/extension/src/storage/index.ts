@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   REVIEW_LOGS: 'lingoping_review_logs',
   VISUAL_CACHE: 'lingoping_visual_cache',
   INITIALIZED: 'lingoping_initialized',
+  CURRENT_USER_ID: 'lingoping_current_user_id',
 };
 
 const DEFAULT_PROFILE: Profile = {
@@ -331,6 +332,28 @@ export class StorageManager {
     this.memoryStore.set(key, value);
   }
 
+  private static activeUserId: string | null = null;
+
+  public static async getCurrentUserId(): Promise<string | null> {
+    if (this.activeUserId) return this.activeUserId;
+    const stored = await this.getRaw<string>(STORAGE_KEYS.CURRENT_USER_ID);
+    this.activeUserId = stored || null;
+    return this.activeUserId;
+  }
+
+  public static async setCurrentUserId(userId: string | null): Promise<void> {
+    this.activeUserId = userId;
+    if (userId) {
+      await this.setRaw(STORAGE_KEYS.CURRENT_USER_ID, userId);
+    } else {
+      await this.setRaw(STORAGE_KEYS.CURRENT_USER_ID, null);
+    }
+  }
+
+  public static async onUserLoggedOut(): Promise<void> {
+    await this.setCurrentUserId(null);
+  }
+
   public static async initSeedData(): Promise<void> {
     const initialized = await this.getRaw<boolean>(STORAGE_KEYS.INITIALIZED);
     if (!initialized) {
@@ -342,30 +365,75 @@ export class StorageManager {
     }
   }
 
+  public static async initStarterDeckForUser(userId: string): Promise<Card[]> {
+    const userCards: Card[] = SEED_CARDS.map((card, idx) => ({
+      ...card,
+      id: `seed_${userId.slice(0, 8)}_${idx + 1}`,
+      user_id: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      due_date: new Date().toISOString(),
+    }));
+
+    await this.saveCards(userCards);
+    return userCards;
+  }
+
   public static async getProfile(): Promise<Profile> {
     await this.initSeedData();
     const profile = await this.getRaw<Profile>(STORAGE_KEYS.PROFILE);
+    const userId = await this.getCurrentUserId();
+    if (userId && profile) {
+      return { ...profile, id: userId };
+    }
     return profile || DEFAULT_PROFILE;
   }
 
   public static async saveProfile(profile: Partial<Profile>): Promise<Profile> {
     const current = await this.getProfile();
+    const userId = (await this.getCurrentUserId()) || current.id;
     const updated: Profile = {
       ...current,
       ...profile,
+      id: userId,
       updated_at: new Date().toISOString(),
     };
     await this.setRaw(STORAGE_KEYS.PROFILE, updated);
     return updated;
   }
 
+  private static getUserCardsKey(userId: string | null): string {
+    return userId ? `${STORAGE_KEYS.CARDS}_${userId}` : STORAGE_KEYS.CARDS;
+  }
+
   public static async getCards(): Promise<Card[]> {
     await this.initSeedData();
+    const userId = await this.getCurrentUserId();
+    if (userId) {
+      const userCardsKey = this.getUserCardsKey(userId);
+      const userCards = await this.getRaw<Card[]>(userCardsKey);
+      if (userCards && userCards.length > 0) {
+        return userCards;
+      }
+      // Fallback to cards matching userId in main store
+      const allCards = (await this.getRaw<Card[]>(STORAGE_KEYS.CARDS)) || [];
+      const filtered = allCards.filter((c) => c.user_id === userId);
+      if (filtered.length > 0) {
+        await this.setRaw(userCardsKey, filtered);
+        return filtered;
+      }
+      return [];
+    }
     const cards = await this.getRaw<Card[]>(STORAGE_KEYS.CARDS);
     return cards || [];
   }
 
   public static async saveCards(cards: Card[]): Promise<void> {
+    const userId = await this.getCurrentUserId();
+    if (userId) {
+      const userCardsKey = this.getUserCardsKey(userId);
+      await this.setRaw(userCardsKey, cards);
+    }
     await this.setRaw(STORAGE_KEYS.CARDS, cards);
   }
 
@@ -397,6 +465,10 @@ export class StorageManager {
   }
 
   public static async addCard(card: Card): Promise<void> {
+    const userId = await this.getCurrentUserId();
+    if (userId && !card.user_id) {
+      card.user_id = userId;
+    }
     const cards = await this.getCards();
     cards.unshift(card);
     await this.saveCards(cards);
@@ -431,17 +503,22 @@ export class StorageManager {
 
   public static async getKnownWords(): Promise<UserKnownWord[]> {
     await this.initSeedData();
-    const words = await this.getRaw<UserKnownWord[]>(STORAGE_KEYS.KNOWN_WORDS);
-    return words || [];
+    const userId = await this.getCurrentUserId();
+    const words = (await this.getRaw<UserKnownWord[]>(STORAGE_KEYS.KNOWN_WORDS)) || [];
+    if (userId) {
+      return words.filter((w) => w.user_id === userId);
+    }
+    return words;
   }
 
   public static async addKnownWord(lemma: string, language: string = 'de'): Promise<void> {
-    const words = await this.getKnownWords();
+    const userId = (await this.getCurrentUserId()) || 'local-user-1';
+    const words = (await this.getRaw<UserKnownWord[]>(STORAGE_KEYS.KNOWN_WORDS)) || [];
     const lower = lemma.toLowerCase().trim();
-    if (!words.some((w) => w.lemma.toLowerCase() === lower)) {
+    if (!words.some((w) => w.user_id === userId && w.lemma.toLowerCase() === lower)) {
       words.unshift({
         id: `kw_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        user_id: 'local-user-1',
+        user_id: userId,
         lemma,
         language,
         created_at: new Date().toISOString(),
@@ -451,19 +528,26 @@ export class StorageManager {
   }
 
   public static async removeKnownWord(id: string): Promise<void> {
-    const words = await this.getKnownWords();
+    const words = (await this.getRaw<UserKnownWord[]>(STORAGE_KEYS.KNOWN_WORDS)) || [];
     const filtered = words.filter((w) => w.id !== id);
     await this.setRaw(STORAGE_KEYS.KNOWN_WORDS, filtered);
   }
 
   public static async logReview(log: ReviewLog): Promise<void> {
+    const userId = (await this.getCurrentUserId()) || 'local-user-1';
+    log.user_id = userId;
     const logs = (await this.getRaw<ReviewLog[]>(STORAGE_KEYS.REVIEW_LOGS)) || [];
     logs.unshift(log);
     await this.setRaw(STORAGE_KEYS.REVIEW_LOGS, logs);
   }
 
   public static async getReviewLogs(): Promise<ReviewLog[]> {
-    return (await this.getRaw<ReviewLog[]>(STORAGE_KEYS.REVIEW_LOGS)) || [];
+    const userId = await this.getCurrentUserId();
+    const logs = (await this.getRaw<ReviewLog[]>(STORAGE_KEYS.REVIEW_LOGS)) || [];
+    if (userId) {
+      return logs.filter((l) => l.user_id === userId);
+    }
+    return logs;
   }
 
   public static async getStats(): Promise<{

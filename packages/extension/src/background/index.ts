@@ -1,5 +1,6 @@
 import { StorageManager } from '../storage/index.js';
 import { enrichVocabularyOffline, createCardFromEnrichment } from '@lingoping/core';
+import { getCurrentUser } from '../auth/index.js';
 
 const ALARM_NAME = 'lingoping_micro_session';
 const CONTEXT_MENU_ID = 'lingoping_add_word';
@@ -46,6 +47,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Opens dedicated standalone popup window (440x640)
 export async function openSessionWindow(): Promise<chrome.windows.Window | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    console.log('[LingoPing] User is not authenticated; skipping periodic session drill.');
+    return null;
+  }
+
   const stats = await StorageManager.getStats();
   if (stats.totalCards === 0) {
     console.log('[LingoPing] No cards in deck to review.');
@@ -82,6 +89,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === CONTEXT_MENU_ID && info.selectionText) {
     const selectedWord = info.selectionText.trim();
     if (!selectedWord) return;
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon-48.png',
+        title: 'LingoPing - Sign In Required',
+        message: 'Please click the LingoPing extension icon to sign in and save words.',
+      });
+      return;
+    }
 
     console.log(`[LingoPing] Captured word from webpage: "${selectedWord}"`);
 
@@ -161,6 +179,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Update badge count with due cards
 export async function updateBadge() {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      await chrome.action.setBadgeText({ text: '' });
+      return;
+    }
     const stats = await StorageManager.getStats();
     const dueCount = stats.dueCards;
     if (dueCount > 0) {

@@ -14,13 +14,15 @@ export default defineConfig(({ mode }) => {
       __APP_ENV__: JSON.stringify(mode),
     },
     esbuild: {
-      drop: isProd ? ['console', 'debugger'] : [],
+      drop: isProd ? ['debugger'] : [],
+      pure: isProd ? ['console.log', 'console.debug'] : [],
     },
     build: {
       outDir: 'dist',
       emptyOutDir: true,
       sourcemap: !isProd,
       minify: isProd ? 'esbuild' : false,
+      chunkSizeWarningLimit: 1200,
       rollupOptions: {
         input: {
           popup: resolve(__dirname, 'popup.html'),
@@ -37,6 +39,19 @@ export default defineConfig(({ mode }) => {
           },
           chunkFileNames: 'assets/[name]-[hash].js',
           assetFileNames: 'assets/[name]-[hash].[ext]',
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('antd') || id.includes('@ant-design')) {
+                return 'vendor-antd';
+              }
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+            }
+          },
         },
       },
     },

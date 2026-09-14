@@ -43,6 +43,7 @@ import {
 import { StorageManager } from '../storage/index.js';
 import { antThemeConfig, CHROMATIC_PALETTES } from '../theme/index.js';
 import { speakText } from '../utils/audio.js';
+import { AuthGate } from '../components/AuthGate.js';
 
 const { Title, Text, Paragraph } = Typography;
 const { Header, Content, Footer } = Layout;
@@ -892,7 +893,9 @@ export const SessionApp: React.FC = () => {
   return (
     <ConfigProvider theme={antThemeConfig}>
       <AntApp>
-        <SessionAppInner />
+        <AuthGate viewTitle="Micro-Session Drill" containerStyle={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+          <SessionAppInner />
+        </AuthGate>
       </AntApp>
     </ConfigProvider>
   );

@@ -32,7 +32,7 @@ import {
 import { StorageManager } from '../storage/index.js';
 import { antThemeConfig } from '../theme/index.js';
 import { enrichVocabularyOffline, createCardFromEnrichment, Profile } from '@lingoping/core';
-import { signInWithGoogle, signOutUser, getCurrentUser } from '../auth/index.js';
+import { AuthGate } from '../components/AuthGate.js';
 import { User } from '@supabase/supabase-js';
 
 const { Title, Text } = Typography;
@@ -47,7 +47,6 @@ export const PopupAppInner: React.FC = () => {
     reviewsToday: 0,
   });
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [authUser, setAuthUser] = useState<User | null>(null);
   const [newWord, setNewWord] = useState('');
   const [addingWord, setAddingWord] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -55,14 +54,12 @@ export const PopupAppInner: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [currentStats, currentProfile, currentUser] = await Promise.all([
+      const [currentStats, currentProfile] = await Promise.all([
         StorageManager.getStats(),
         StorageManager.getProfile(),
-        getCurrentUser(),
       ]);
       setStats(currentStats);
       setProfile(currentProfile);
-      setAuthUser(currentUser);
     } catch (err) {
       console.error('Failed to load popup data:', err);
     } finally {
@@ -206,67 +203,7 @@ export const PopupAppInner: React.FC = () => {
         </Tag>
       </Flex>
 
-      {/* User Account / Google Sign-In Status */}
-      {authUser ? (
-        <Flex
-          justify="space-between"
-          align="center"
-          style={{
-            backgroundColor: '#f0fdf4',
-            padding: '6px 10px',
-            borderRadius: 8,
-            marginBottom: 12,
-            border: '1px solid #bbf7d0',
-          }}
-        >
-          <Space size={8}>
-            <Avatar
-              size="small"
-              src={authUser.user_metadata?.avatar_url}
-              icon={<UserOutlined />}
-            />
-            <Text ellipsis style={{ fontSize: 12, maxWidth: 180, color: '#166534', fontWeight: 500 }}>
-              {authUser.user_metadata?.full_name || authUser.email}
-            </Text>
-          </Space>
-          <Tooltip title="Sign Out">
-            <Button
-              type="text"
-              size="small"
-              icon={<LogoutOutlined style={{ color: '#166534' }} />}
-              onClick={async () => {
-                await signOutUser();
-                setAuthUser(null);
-                message.info('Signed out of Google.');
-              }}
-            />
-          </Tooltip>
-        </Flex>
-      ) : (
-        <Button
-          size="small"
-          icon={<GoogleOutlined style={{ color: '#ea4335' }} />}
-          onClick={async () => {
-            const res = await signInWithGoogle();
-            if (res.success) {
-              message.success('Signed in with Google!');
-              const u = await getCurrentUser();
-              setAuthUser(u);
-            } else {
-              message.error(res.error || 'Sign-in failed');
-            }
-          }}
-          style={{
-            marginBottom: 12,
-            borderColor: '#e2e8f0',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
-          block
-        >
-          Sign in with Google
-        </Button>
-      )}
+
 
       {/* Stats Cards */}
       <Card
@@ -390,7 +327,9 @@ export const PopupApp: React.FC = () => {
   return (
     <ConfigProvider theme={antThemeConfig}>
       <AntApp>
-        <PopupAppInner />
+        <AuthGate viewTitle="Control Panel">
+          <PopupAppInner />
+        </AuthGate>
       </AntApp>
     </ConfigProvider>
   );

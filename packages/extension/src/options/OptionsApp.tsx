@@ -63,6 +63,7 @@ import { StorageManager } from '../storage/index.js';
 import { antThemeConfig, CHROMATIC_PALETTES } from '../theme/index.js';
 import { speakText } from '../utils/audio.js';
 import { signInWithGoogle, signOutUser, getCurrentUser } from '../auth/index.js';
+import { AuthGate } from '../components/AuthGate.js';
 import { User } from '@supabase/supabase-js';
 
 const { Title, Text, Paragraph } = Typography;
@@ -1411,7 +1412,9 @@ export const OptionsApp: React.FC = () => {
   return (
     <ConfigProvider theme={antThemeConfig}>
       <AntApp>
-        <OptionsAppInner />
+        <AuthGate viewTitle="Management Dashboard" containerStyle={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+          <OptionsAppInner />
+        </AuthGate>
       </AntApp>
     </ConfigProvider>
   );
