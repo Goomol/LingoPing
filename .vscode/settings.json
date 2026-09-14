@@ -1,0 +1,8 @@
+{
+  "github-actions.workflows.pinned.workflows": [
+    "ci.yml",
+    "release-staging.yml",
+    "release-production.yml"
+  ],
+  "github-actions.remote-name": "origin"
+}
