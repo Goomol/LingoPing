@@ -28,14 +28,11 @@ jobs:
       - name: Install Monorepo Dependencies
         run: npm ci
 
-      - name: TypeScript Compilation Check
-        run: npm run build --workspace=packages/core
+      - name: Build Monorepo Packages (Core & Extension)
+        run: npm run build:prod
 
       - name: Run Full Test Suite (Core & Extension)
         run: npm run test:all
-
-      - name: Extension Production Build Validation
-        run: npm run build:prod
 
       - name: Manifest V3 & CSP Validation
         run: |

@@ -20,7 +20,10 @@
     "build:extension": "npm run build --workspace=packages/extension",
     "env:setup": "node scripts/setup-env.js",
     "env:check": "node scripts/check-env.js",
-    "repo:create": "node scripts/create-github-repo.js"
+    "repo:create": "node scripts/create-github-repo.js",
+    "github:status": "node scripts/github-automation.js status",
+    "github:staging": "node scripts/github-automation.js staging",
+    "github:prod": "node scripts/github-automation.js prod"
   },
   "keywords": [
     "fsrs",

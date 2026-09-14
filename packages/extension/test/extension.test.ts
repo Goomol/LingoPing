@@ -12,6 +12,13 @@ const distRoot = path.resolve(extensionRoot, 'dist');
 describe('Chrome Extension Manifest V3 Compliance', () => {
   const manifestPath = path.join(distRoot, 'manifest.json');
 
+  beforeAll(async () => {
+    if (!fs.existsSync(manifestPath)) {
+      const { execSync } = await import('node:child_process');
+      execSync('npm run build', { cwd: extensionRoot, stdio: 'pipe' });
+    }
+  });
+
   it('generates a valid Manifest V3 json in dist/', () => {
     expect(fs.existsSync(manifestPath)).toBe(true);
     const content = fs.readFileSync(manifestPath, 'utf8');

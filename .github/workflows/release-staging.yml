@@ -28,8 +28,8 @@ jobs:
 
       - name: Package Staging Extension
         env:
-          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL || 'https://vgghstqqehgoxuytvpat.supabase.co' }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_bqwrvqIo4py37geu-XgRag_-mD4UMNS' }}
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL || 'https://cqyepytfqtatnxdtdsop.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_jcgU7zl_8sU35qoDkgozQA_rMbm7bfv' }}
         run: npm run pack:staging
 
       - name: Upload Staging ZIP Artifact
