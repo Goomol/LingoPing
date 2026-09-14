@@ -433,8 +433,9 @@ export class StorageManager {
     if (userId) {
       const userCardsKey = this.getUserCardsKey(userId);
       await this.setRaw(userCardsKey, cards);
+    } else {
+      await this.setRaw(STORAGE_KEYS.CARDS, cards);
     }
-    await this.setRaw(STORAGE_KEYS.CARDS, cards);
   }
 
   public static async getCachedVisual(

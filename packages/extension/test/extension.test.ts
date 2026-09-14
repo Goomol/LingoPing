@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,7 +69,12 @@ describe('Extension Storage Manager & Deck Initialization', () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.clear();
     }
+    await StorageManager.onUserLoggedOut();
     await StorageManager.initSeedData();
+  });
+
+  beforeEach(async () => {
+    await StorageManager.onUserLoggedOut();
   });
 
   it('initializes seed cards including German der/die/das and grammar cards', async () => {
